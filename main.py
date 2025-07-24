@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Dict
 import json
+import difflib
 
 app = FastAPI()
 
@@ -15,6 +16,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Load FAQ data
 with open("faq.json") as f:
     faq_data: Dict[str, str] = json.load(f)
 
@@ -26,9 +28,13 @@ class ChatResponse(BaseModel):
 
 def find_answer(user_input: str) -> str:
     user_input = user_input.lower().strip()
-    for question, answer in faq_data.items():
-        if question in user_input:
-            return answer
+    questions = list(faq_data.keys())
+
+    # Use fuzzy matching to find the closest question
+    close_matches = difflib.get_close_matches(user_input, questions, n=1, cutoff=0.5)
+    if close_matches:
+        best_match = close_matches[0]
+        return faq_data[best_match]
     return "I'm not sure. Please check with the DevOps team."
 
 @app.post("/chat", response_model=ChatResponse)
