@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from typing import Dict
 import json
 import difflib
+import os
 
 app = FastAPI()
 
@@ -16,8 +17,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load FAQ data
-with open("faq.json") as f:
+# Load FAQ data using absolute path (Render-safe)
+faq_path = os.path.join(os.path.dirname(__file__), "faq.json")
+with open(faq_path) as f:
     faq_data: Dict[str, str] = json.load(f)
 
 class Message(BaseModel):
@@ -32,6 +34,11 @@ def find_answer(user_input: str) -> str:
 
     # Use fuzzy matching to find the closest question
     close_matches = difflib.get_close_matches(user_input, questions, n=1, cutoff=0.5)
+    
+    # Debugging logs (visible in Render logs)
+    print("User input:", user_input)
+    print("Matched:", close_matches)
+
     if close_matches:
         best_match = close_matches[0]
         return faq_data[best_match]
