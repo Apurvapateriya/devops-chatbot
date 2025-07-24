@@ -1,3 +1,5 @@
 fastapi==0.95.2
 uvicorn[standard]==0.22.0
 pydantic==1.10.11
+python-dotenv
+rapidfuzz==3.6.1
