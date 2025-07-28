@@ -15,9 +15,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, set your frontend domain
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=["https://apurvapateriya.github.io"]
 )
 
 with open("faq.json") as f:
