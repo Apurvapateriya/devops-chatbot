@@ -13,7 +13,7 @@ API_KEY = os.getenv("API_KEY")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://your-username.github.io"],  # Replace with your actual GitHub Pages URL
+    allow_origins=["https://apurvapateriya.github.io"],
     allow_methods=["POST"],  # Only allow POST requests
     allow_headers=["*"],
 )
