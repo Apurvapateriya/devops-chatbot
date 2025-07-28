@@ -1,27 +1,25 @@
 from __future__ import annotations
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Dict
+from typing import Dict, Optional
 import json
-from rapidfuzz import process
-import openai
+import difflib
 import os
-from dotenv import load_dotenv
-
-load_dotenv()
 
 app = FastAPI()
 
+API_KEY = os.getenv("API_KEY")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://apurvapateriya.github.io"]
+    allow_origins=["https://your-username.github.io"],  # Replace with your actual GitHub Pages URL
+    allow_methods=["POST"],  # Only allow POST requests
+    allow_headers=["*"],
 )
 
 with open("faq.json") as f:
     faq_data: Dict[str, str] = json.load(f)
-
-openai.api_key = os.getenv("OPENAI_API_KEY")  # Store key in .env
 
 class Message(BaseModel):
     message: str
@@ -29,30 +27,24 @@ class Message(BaseModel):
 class ChatResponse(BaseModel):
     response: str
 
-def find_answer(user_input: str) -> str | None:
+# 🧠 Fuzzy
+def find_answer(user_input: str) -> str:
+    user_input = user_input.lower().strip()
     questions = list(faq_data.keys())
-    match, score, _ = process.extractOne(user_input, questions, score_cutoff=60)
-    if match:
-        return faq_data[match]
-    return None
+    close_matches = difflib.get_close_matches(user_input, questions, n=1, cutoff=0.5)
+    if close_matches:
+        best_match = close_matches[0]
+        return faq_data[best_match]
+    return "I'm not sure. Please check with the DevOps team."
 
-def ask_openai(prompt: str) -> str:
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.6,
-        )
-        return response.choices[0].message["content"].strip()
-    except Exception as e:
-        return "Sorry, I couldn't process that right now."
-
+# 🤖 Chat endpoint
 @app.post("/chat", response_model=ChatResponse)
-async def chat(msg: Message) -> ChatResponse:
-    faq_answer = find_answer(msg.message)
-    if faq_answer:
-        return ChatResponse(response=faq_answer)
-    
-    # Fallback to OpenAI for non-DevOps or generic questions
-    gpt_reply = ask_openai(msg.message)
-    return ChatResponse(response=gpt_reply)
+async def chat(
+    msg: Message,
+    x_api_key: Optional[str] = Header(None)
+) -> ChatResponse:
+    if API_KEY and x_api_key != API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid API Key")
+
+    answer = find_answer(msg.message)
+    return ChatResponse(response=answer)
